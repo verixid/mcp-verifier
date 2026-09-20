@@ -1,0 +1,29 @@
+name: Publish to MCP Registry
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # WAJIB: Membuka akses OIDC Token dari GitHub
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Request OIDC Token & Publish to Registry
+        run: |
+          # 1. Ambil OIDC Token dari GitHub Actions
+          OIDC_TOKEN=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://registry.modelcontextprotocol.io" | jq -r '.value')
+
+          # 2. Kirim manifest server.json ke MCP Registry API
+          curl -X POST "https://registry.modelcontextprotocol.io/v0.1/servers" \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d @server.json
